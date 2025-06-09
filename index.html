@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clima por CEP</title>
+    <link rel="stylesheet" href="estilo.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #90aedb;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 320px;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        button {
+            background: #007BFF;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            width: 100%;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        #resultado {
+            margin-top: 20px;
+            text-align: left;
+            font-size: 1.1rem;
+        }
+
+        .erro {
+            color: red;
+        }
+
+        .cidade {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+    </style>
+
+</head>
+
+<body>
+    <div class="container">
+        <h1>🌤️ Clima por CEP</h1>
+        <input type="text" id="cep" placeholder="Digite o CEP (ex: 49000-000)" maxlength="9">
+        <button onclick="consultarClimaPorCEP()">Buscar Temperatura</button>
+        <div id="resultado"></div>
+    </div>
+    <script>
+        async function consultarClimaPorCEP() {
+            const cep = document.getElementById('cep').value.replace(/\D/g, '');
+            const resultadoDiv = document.getElementById('resultado');
+
+            if (cep.length !== 8) {
+                resultadoDiv.innerHTML = '<p class="erro">CEP inválido! Digite 8 números.</p>';
+                return;
+            }
+
+            resultadoDiv.innerHTML = '<p>Buscando cidade...</p>';
+
+            try {
+                // Passo 1: Consulta CEP via ViaCEP
+                const viaCepUrl = `https://viacep.com.br/ws/${cep}/json/`;
+                const cepResponse = await fetch(viaCepUrl);
+                const cepData = await cepResponse.json();
+
+                if (cepData.erro) {
+                    throw new Error('CEP não encontrado!');
+                }
+
+                const cidade = cepData.localidade;
+                const uf = cepData.uf;
+
+                resultadoDiv.innerHTML = `<p>Buscando clima em ${cidade}-${uf}...</p>`;
+
+                // Passo 2: Consulta clima via OpenWeatherMap
+                const API_KEY = 'SUA_CHAVE_API'; // Substitua pela sua chave!
+                const weatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=${cidade},BR&units=metric&lang=pt_br&appid=${API_KEY}`;
+                const weatherResponse = await fetch(weatherUrl);
+
+                if (!weatherResponse.ok) {
+                    throw new Error('Cidade não encontrada na API de clima!');
+                }
+
+                const weatherData = await weatherResponse.json();
+                const temperatura = weatherData.main.temp;
+                const descricao = weatherData.weather[0].description;
+
+                resultadoDiv.innerHTML = `
+            <p class="cidade">${cidade}-${uf}</p>
+            <p>🌡️ Temperatura: ${temperatura}°C</p>
+            <p>☁️ Condição: ${descricao}</p>
+        `;
+
+            } catch (error) {
+                resultadoDiv.innerHTML = `<p class="erro">Erro: ${error.message}</p>`;
+            }
+        }
+
+        // Formata CEP (adiciona traço)
+        document.getElementById('cep').addEventListener('input', function (e) {
+            let value = e.target.value.replace(/\D/g, '');
+            if (value.length > 5) {
+                value = value.substring(0, 5) + '-' + value.substring(5, 8);
+            }
+            e.target.value = value;
+        });
+    </script>
+</body>
+
+</html>
